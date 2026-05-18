@@ -1,12 +1,3 @@
-# Streamlit Cloud용 서울 관광지 Top10 지도 앱
-
-아래 파일 2개를 같은 폴더에 저장한 뒤, Streamlit Cloud에 업로드하면 바로 실행됩니다.
-
----
-
-## 1. app.py
-
-```python
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -134,33 +125,3 @@ if st.session_state.selected_place:
     )
 else:
     st.info("지도에서 관광지를 클릭해보세요!")
-```
-
----
-
-## 2. requirements.txt
-
-```txt
-streamlit
-folium
-streamlit-folium
-```
-
----
-
-## 실행 방법
-
-### 로컬 실행
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-### Streamlit Cloud 배포
-
-1. GitHub에 app.py 와 requirements.txt 업로드
-2. Streamlit Cloud 접속
-3. GitHub 저장소 연결
-4. Main file path를 app.py로 설정
-5. Deploy 클릭
