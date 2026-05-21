@@ -1,1 +1,70 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 
+# -----------------------------
+# 한글 폰트 설정
+# -----------------------------
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
+# -----------------------------
+# 데이터 불러오기
+# -----------------------------
+df = pd.read_csv("seoul_population.csv")
+
+# 컬럼 이름 예시:
+# 행정구, 나이, 인구수
+
+# -----------------------------
+# 스트림릿 제목
+# -----------------------------
+st.title("서울시 행정구별 인구수")
+
+# -----------------------------
+# 행정구 선택
+# -----------------------------
+district_list = df["행정구"].unique()
+
+selected_district = st.selectbox(
+    "행정구를 선택하세요",
+    district_list
+)
+
+# -----------------------------
+# 선택한 행정구 데이터
+# -----------------------------
+filtered_df = df[df["행정구"] == selected_district]
+
+# 나이 순 정렬
+filtered_df = filtered_df.sort_values("나이")
+
+# -----------------------------
+# 그래프 생성
+# -----------------------------
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# 회색 배경
+fig.patch.set_facecolor("lightgray")
+ax.set_facecolor("lightgray")
+
+# 빨간색 꺾은선 그래프
+ax.plot(
+    filtered_df["나이"],
+    filtered_df["인구수"],
+    color="red",
+    linewidth=3,
+    marker="o"
+)
+
+# 제목 및 축 이름
+ax.set_title("서울시 행정구별 인구수", fontsize=18)
+ax.set_xlabel("나이", fontsize=13)
+ax.set_ylabel("인구수", fontsize=13)
+
+# 격자
+ax.grid(True, linestyle="--", alpha=0.5)
+
+# 스트림릿 출력
+st.pyplot(fig)
