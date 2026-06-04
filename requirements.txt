@@ -5,5 +5,3 @@ numpy
 folium
 streamlit-folium
 matplotlib
-tensorflow
-pillow
