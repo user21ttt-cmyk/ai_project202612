@@ -6,4 +6,5 @@ folium
 streamlit-folium
 matplotlib
 pillow
-tensorflow
+scikit-learn
+opencv-python-headless
