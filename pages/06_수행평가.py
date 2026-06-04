@@ -1,65 +1,155 @@
 import streamlit as st
+import cv2
 import numpy as np
+import os
+import joblib
+
 from PIL import Image
-import tensorflow as tf
+from sklearn.ensemble import RandomForestClassifier
 
-st.set_page_config(page_title="화장 판별기", layout="wide")
+MODEL_FILE = "makeup_model.pkl"
 
+# -----------------------
+# 특징 추출 함수
+# -----------------------
+def extract_features(img):
+
+    img = cv2.resize(img, (64, 64))
+
+    rgb_mean = img.mean(axis=(0, 1))
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+    hsv_mean = hsv.mean(axis=(0, 1))
+
+    features = np.concatenate([
+        rgb_mean,
+        hsv_mean
+    ])
+
+    return features
+
+
+# -----------------------
+# 데이터셋 읽기
+# -----------------------
+def load_dataset():
+
+    X = []
+    y = []
+
+    base = "data/data"
+
+    classes = {
+        "no_makeup": 0,
+        "makeup": 1
+    }
+
+    for cls, label in classes.items():
+
+        folder = os.path.join(base, cls)
+
+        for file in os.listdir(folder):
+
+            path = os.path.join(folder, file)
+
+            try:
+                img = Image.open(path).convert("RGB")
+                img = np.array(img)
+
+                feat = extract_features(img)
+
+                X.append(feat)
+                y.append(label)
+
+            except:
+                pass
+
+    return np.array(X), np.array(y)
+
+
+# -----------------------
+# 모델 학습
+# -----------------------
 @st.cache_resource
-def load_model():
-    return tf.keras.models.load_model("makeup_model.keras")
+def get_model():
 
-model = load_model()
+    if os.path.exists(MODEL_FILE):
+        return joblib.load(MODEL_FILE)
 
+    X, y = load_dataset()
+
+    model = RandomForestClassifier(
+        n_estimators=300,
+        random_state=42
+    )
+
+    model.fit(X, y)
+
+    joblib.dump(model, MODEL_FILE)
+
+    return model
+
+
+model = get_model()
+
+# -----------------------
+# UI
+# -----------------------
 st.title("💄 화장 여부 판별 AI")
 
-uploaded_file = st.file_uploader(
+uploaded = st.file_uploader(
     "사진 업로드",
     type=["jpg", "jpeg", "png"]
 )
 
-if uploaded_file:
+if uploaded:
 
-    image = Image.open(uploaded_file).convert("RGB")
+    image = Image.open(uploaded).convert("RGB")
 
-    st.image(image, width=350)
+    st.image(image, width=300)
 
-    img = image.resize((224, 224))
-    img = np.array(img) / 255.0
-    img = np.expand_dims(img, axis=0)
+    img = np.array(image)
 
-    pred = model.predict(img, verbose=0)[0][0]
+    feat = extract_features(img)
 
-    if pred >= 0.5:
+    prob = model.predict_proba([feat])[0][1]
+
+    if prob >= 0.5:
         result = "화장한 사람"
-        confidence = pred * 100
+        confidence = prob * 100
     else:
         result = "화장하지 않은 사람"
-        confidence = (1 - pred) * 100
+        confidence = (1 - prob) * 100
 
-    st.subheader(f"결과 : {result}")
-    st.metric("신뢰도", f"{confidence:.1f}%")
+    st.success(result)
+
+    st.metric(
+        "신뢰도",
+        f"{confidence:.1f}%"
+    )
 
     st.markdown("---")
 
-    if pred >= 0.5:
-        st.write("### 화장 특징")
+    st.subheader("분석")
+
+    if prob >= 0.5:
         st.write("""
-        - 피부톤이 균일하게 보일 수 있음
-        - 입술 색상이 선명함
-        - 눈매가 강조될 수 있음
-        - 사진 촬영에 유리한 경우가 많음
+        ✔ 피부톤이 비교적 균일함
+
+        ✔ 색조 표현이 강함
+
+        ✔ 입술·눈 주변 색상이 뚜렷함
         """)
     else:
-        st.write("### 민낯 특징")
         st.write("""
-        - 자연스러운 피부 표현
-        - 본래 얼굴 특징 확인 가능
-        - 피부결과 주근깨 등이 보일 수 있음
-        - 꾸미지 않은 자연스러운 느낌
+        ✔ 자연스러운 피부 표현
+
+        ✔ 색조 대비가 적음
+
+        ✔ 원래 피부 특징이 잘 보임
         """)
 
     st.info(
-        "어느 쪽이 더 좋다고 판단하지 않으며, "
-        "상황과 개인 취향에 따라 적합성이 달라집니다."
+        "이 결과는 AI의 추정이며 100% 정확하지 않을 수 있습니다."
     )
